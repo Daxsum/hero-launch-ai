@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, Zap, Globe } from "lucide-react";
-import heroImage from "@/assets/hero-ai-platform.jpg";
+import { WebsiteShowcase } from "@/components/WebsiteShowcase";
 
 export const HeroSection = () => {
   return (
@@ -63,15 +63,10 @@ export const HeroSection = () => {
             </div>
           </div>
           
-          {/* Right content - Hero Image */}
+          {/* Right content - Website Showcase Canvas */}
           <div className="relative animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <div className="relative">
-              <img 
-                src={heroImage} 
-                alt="AI Platform Interface showing website building in 3 clicks"
-                className="w-full h-auto rounded-2xl shadow-glow"
-              />
-              <div className="absolute inset-0 bg-gradient-primary opacity-10 rounded-2xl"></div>
+            <div className="relative h-[500px] lg:h-[600px]">
+              <WebsiteShowcase />
             </div>
             
             {/* Floating elements */}
