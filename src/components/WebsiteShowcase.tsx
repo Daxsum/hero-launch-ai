@@ -7,6 +7,8 @@ import ecommerceImg from "@/assets/website-ecommerce.jpg";
 import portfolioImg from "@/assets/website-portfolio.jpg";
 import restaurantImg from "@/assets/website-restaurant.jpg";
 import businessImg from "@/assets/website-business.jpg";
+import blogImg from "@/assets/website-blog.jpg";
+import fitnessImg from "@/assets/website-fitness.jpg";
 
 interface Website {
   id: string;
@@ -44,12 +46,31 @@ const websites: Website[] = [
     type: "Business",
     image: businessImg,
     url: "https://proconsult-business.com"
+  },
+  {
+    id: "5",
+    name: "TechBlog Daily",
+    type: "Blog",
+    image: blogImg,
+    url: "https://techblog-daily.com"
+  },
+  {
+    id: "6",
+    name: "FitZone Gym",
+    type: "Fitness",
+    image: fitnessImg,
+    url: "https://fitzone-gym.com"
   }
 ];
 
+// Split websites into 3 columns
+const column1 = [websites[0], websites[3], websites[0], websites[3]]; // E-commerce, Business (forward)
+const column2 = [websites[1], websites[4], websites[1], websites[4]]; // Portfolio, Blog (backward)
+const column3 = [websites[2], websites[5], websites[2], websites[5]]; // Restaurant, Fitness (forward)
+
 export const WebsiteShowcase = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [animationOffset, setAnimationOffset] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const imagesRef = useRef<HTMLImageElement[]>([]);
 
@@ -96,8 +117,76 @@ export const WebsiteShowcase = () => {
     window.addEventListener("resize", resizeCanvas);
 
     let animationFrame: number;
-    let slideAnimation = 0;
-    const slideSpeed = 0.02;
+    let offset = 0;
+    const speed = 0.5; // Pixels per frame
+
+    const drawColumn = (
+      images: Website[], 
+      startX: number, 
+      columnWidth: number, 
+      direction: number,
+      columnOffset: number,
+      canvasHeight: number
+    ) => {
+      const itemHeight = 200;
+      const gap = 20;
+      const totalItemHeight = itemHeight + gap;
+      
+      // Calculate how many images we need to show to fill the screen
+      const visibleItems = Math.ceil(canvasHeight / totalItemHeight) + 2;
+      
+      for (let i = 0; i < visibleItems; i++) {
+        const imageIndex = i % images.length;
+        const website = images[imageIndex];
+        const img = imagesRef.current.find(image => image.src.includes(website.image.split('/').pop() || ''));
+        
+        if (img) {
+          const y = (i * totalItemHeight + (offset * direction) + columnOffset) % (canvasHeight + totalItemHeight);
+          
+          // Only draw if the image is visible
+          if (y > -itemHeight && y < canvasHeight) {
+            // Calculate image dimensions
+            const aspectRatio = img.width / img.height;
+            const imageWidth = Math.min(columnWidth - 20, itemHeight * aspectRatio);
+            const imageHeight = imageWidth / aspectRatio;
+            
+            const x = startX + (columnWidth - imageWidth) / 2;
+            
+            // Add shadow
+            ctx.shadowColor = "rgba(0, 0, 0, 0.15)";
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 8;
+            
+            // Draw rounded rectangle background
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.roundRect(x - 5, y - 5, imageWidth + 10, imageHeight + 10, 8);
+            ctx.fill();
+            
+            // Draw image
+            ctx.shadowColor = "transparent";
+            ctx.drawImage(img, x, y, imageWidth, imageHeight);
+            
+            // Add website info overlay
+            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            ctx.beginPath();
+            ctx.roundRect(x, y + imageHeight - 60, imageWidth, 60, [0, 0, 8, 8]);
+            ctx.fill();
+            
+            // Website name
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "600 14px Inter, sans-serif";
+            ctx.fillText(website.name, x + 10, y + imageHeight - 35);
+            
+            // Website type
+            ctx.fillStyle = "#a855f7";
+            ctx.font = "500 12px Inter, sans-serif";
+            ctx.fillText(website.type, x + 10, y + imageHeight - 15);
+          }
+        }
+      }
+    };
 
     const animate = () => {
       const canvasWidth = canvas.offsetWidth;
@@ -106,88 +195,16 @@ export const WebsiteShowcase = () => {
       // Clear canvas
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
       
-      // Calculate positions
-      const currentImg = imagesRef.current[currentIndex];
-      const nextIndex = (currentIndex + 1) % websites.length;
-      const nextImg = imagesRef.current[nextIndex];
+      // Update offset
+      offset += speed;
+      setAnimationOffset(offset);
       
-      if (currentImg && nextImg) {
-        // Calculate image dimensions to fit canvas while maintaining aspect ratio
-        const padding = 20;
-        const maxWidth = canvasWidth - padding * 2;
-        const maxHeight = canvasHeight - padding * 2;
-        
-        const currentRatio = currentImg.width / currentImg.height;
-        const nextRatio = nextImg.width / nextImg.height;
-        
-        // Current image
-        let currentWidth = maxWidth;
-        let currentHeight = currentWidth / currentRatio;
-        if (currentHeight > maxHeight) {
-          currentHeight = maxHeight;
-          currentWidth = currentHeight * currentRatio;
-        }
-        
-        // Next image
-        let nextWidth = maxWidth;
-        let nextHeight = nextWidth / nextRatio;
-        if (nextHeight > maxHeight) {
-          nextHeight = maxHeight;
-          nextWidth = nextHeight * nextRatio;
-        }
-        
-        // Animation offset
-        const offset = slideAnimation * canvasWidth;
-        
-        // Draw current image (sliding out to left)
-        const currentX = (canvasWidth - currentWidth) / 2 - offset;
-        const currentY = (canvasHeight - currentHeight) / 2;
-        
-        if (currentX + currentWidth > 0) {
-          // Add subtle shadow
-          ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
-          ctx.shadowBlur = 20;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 10;
-          
-          ctx.drawImage(currentImg, currentX, currentY, currentWidth, currentHeight);
-          
-          // Reset shadow
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        }
-        
-        // Draw next image (sliding in from right)
-        const nextX = (canvasWidth - nextWidth) / 2 + canvasWidth - offset;
-        const nextY = (canvasHeight - nextHeight) / 2;
-        
-        if (nextX < canvasWidth) {
-          // Add subtle shadow
-          ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
-          ctx.shadowBlur = 20;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 10;
-          
-          ctx.drawImage(nextImg, nextX, nextY, nextWidth, nextHeight);
-          
-          // Reset shadow
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        }
-      }
+      const columnWidth = canvasWidth / 3;
       
-      // Update animation
-      slideAnimation += slideSpeed;
-      
-      // Check if slide is complete
-      if (slideAnimation >= 1) {
-        slideAnimation = 0;
-        setCurrentIndex(nextIndex);
-      }
+      // Draw three columns with different directions and offsets
+      drawColumn(column1, 0, columnWidth, 1, 0, canvasHeight);           // Forward
+      drawColumn(column2, columnWidth, columnWidth, -1, 100, canvasHeight);  // Backward, offset
+      drawColumn(column3, columnWidth * 2, columnWidth, 1, 200, canvasHeight); // Forward, offset
       
       animationFrame = requestAnimationFrame(animate);
     };
@@ -198,67 +215,56 @@ export const WebsiteShowcase = () => {
       cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", resizeCanvas);
     };
-  }, [isLoaded, currentIndex]);
-
-  // Auto-slide timer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // The animation will handle the transition
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const currentWebsite = websites[currentIndex];
+  }, [isLoaded]);
 
   return (
     <div className="relative w-full h-full">
-      {/* Canvas for sliding websites */}
-      <canvas 
-        ref={canvasRef}
-        className="w-full h-full rounded-2xl shadow-glow"
-        style={{ background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)" }}
-      />
+      {/* Canvas container with 45-degree rotation */}
+      <div className="w-full h-full transform rotate-45 origin-center scale-75">
+        <canvas 
+          ref={canvasRef}
+          className="w-full h-full rounded-2xl shadow-glow"
+          style={{ 
+            background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+            width: "100%",
+            height: "100%" 
+          }}
+        />
+      </div>
       
-      {/* Overlay with website info */}
-      <div className="absolute bottom-6 left-6 right-6">
+      {/* Overlay info - positioned outside the rotated canvas */}
+      <div className="absolute bottom-6 left-6 right-6 z-10">
         <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl p-4 shadow-soft">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-hero-primary" />
-                <span className="text-sm font-medium text-hero-primary">{currentWebsite?.type}</span>
+                <span className="text-sm font-medium text-hero-primary">Live Showcase</span>
               </div>
-              <h4 className="font-semibold text-foreground">{currentWebsite?.name}</h4>
-              <p className="text-sm text-muted-foreground">Generated in 3 clicks • Live in 30 seconds</p>
+              <h4 className="font-semibold text-foreground">6 Different Website Types</h4>
+              <p className="text-sm text-muted-foreground">All generated in 3 clicks • Live in 30 seconds</p>
             </div>
             <Button variant="hero-outline" size="sm">
               <ExternalLink className="w-4 h-4 mr-2" />
-              View Live
+              Explore All
             </Button>
           </div>
         </div>
       </div>
       
-      {/* Dots indicator */}
-      <div className="absolute top-6 right-6">
-        <div className="flex gap-2">
-          {websites.map((_, index) => (
-            <div
-              key={index}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex 
-                  ? "bg-hero-primary w-6" 
-                  : "bg-hero-primary/30"
-              }`}
-            />
-          ))}
+      {/* Status indicator */}
+      <div className="absolute top-6 right-6 z-10">
+        <div className="bg-card/95 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-soft">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse-slow"></div>
+            <span className="text-sm font-medium text-foreground">AI Building</span>
+          </div>
         </div>
       </div>
       
       {/* Loading state */}
       {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-subtle rounded-2xl">
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-subtle rounded-2xl z-20">
           <div className="text-center space-y-2">
             <div className="w-8 h-8 border-2 border-hero-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm text-muted-foreground">Loading showcases...</p>
